@@ -220,6 +220,7 @@ class Recipient(db.Model):
         try:
             #TODO -- AirPair question -- how do friend_id, message_id get set?
             #self.quantity = int(data['quantity'])
+            print('for giggles')
         except KeyError as e:
             raise ValidationError('Invalid message: missing ' + e.args[0])
         return self
@@ -245,6 +246,7 @@ class Friend(db.Model):
         try:
             #TODO -- AirPair question -- how do from_user_id, to_user_id get set?
             #self.quantity = int(data['quantity'])
+            print('for giggles')
         except KeyError as e:
             raise ValidationError('Invalid relationship: missing ' + e.args[0])
         return self
