@@ -13,11 +13,12 @@ class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True)
+    email = db.Column(db.String(256))
     password_hash = db.Column(db.String(128))
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
-
+    
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
@@ -34,6 +35,24 @@ class User(db.Model):
             return None
         return User.query.get(data['id'])
 
+    def get_url(self):
+        return url_for('api.get_user', id=self.id, _external=True)
+    
+    def export_data(self):
+        return {
+            'self_url': self.get_url(),
+            'username': self.username,
+            'email' : self.email
+        }
+
+    def import_data(self, data):
+        try:
+            self.username = data['username']
+            self.email = data['email']
+            self.password_hash = generate_password_hash(data['password'])
+        except KeyError as e:
+            raise ValidationError('Invalid user: missing ' + e.args[0])
+        return self
 
 class Customer(db.Model):
     __tablename__ = 'customers'
@@ -113,6 +132,39 @@ class Order(db.Model):
         return self
 
 
+class Message(db.Model):
+    __tablename__ = 'messages'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    date = db.Column(db.DateTime, default=datetime.now)
+    recipients = db.relationship('Recipient', backref='order', lazy='dynamic', cascade='all, delete-orphan')
+    file_path = db.Column(db.String(256))
+    file_type = db.Column(db.String(64))
+    
+    def get_url(self):
+        return url_for('api.get_message', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'self_url': self.get_url(),
+            'sender_url': self.sender.get_url(),
+            'date': self.date.isoformat() + 'Z',
+            'recipients_url': url_for('api.get_message_recipients', id=self.id,_external=True)
+        }
+
+    def import_data(self, data):
+        try:
+            self.sender_id = int(data['sender_id'])
+            self.date = datetime_parser.parse(data['date']).astimezone(tzutc()).replace(tzinfo=None)
+            #TODO -- how does self.recipients get set?
+            #self.recipients = ??
+            self.file_path = data['file_path']
+            self.file_type = data['file_type']
+        except KeyError as e:
+            raise ValidationError('Invalid message: missing ' + e.args[0])
+        return self
+
+
 class Item(db.Model):
     __tablename__ = 'items'
     id = db.Column(db.Integer, primary_key=True)
@@ -146,3 +198,54 @@ class Item(db.Model):
             raise ValidationError('Invalid product URL: ' +
                                   data['product_url'])
         return self
+
+#TODO -- AirPair question -- Recipient is really more like XrefMessageUser?...
+class Recipient(db.Model):
+    __tablename__ = 'recipients'
+    id = db.Column(db.Integer, primary_key=True)
+    friend_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    message_id = db.Column(db.Integer, db.ForeignKey('messages.id'), index=True)
+        
+    def get_url(self):
+        return url_for('api.get_recipient', id=self.id, _external=True)
+
+    def export_data(self):
+        return {
+            'self_url': self.get_url(),
+            'friend_url': self.user.get_url(),
+            'message_url': self.message.get_url()
+        }
+
+    def import_data(self, data):
+        try:
+            #TODO -- AirPair question -- how do friend_id, message_id get set?
+            #self.quantity = int(data['quantity'])
+        except KeyError as e:
+            raise ValidationError('Invalid message: missing ' + e.args[0])
+        return self
+
+#TODO -- AirPair question -- Friend is really more like XrefUserUser?...
+class Friend(db.Model):
+    __tablename__ = 'friends'
+    id = db.Column(db.Integer, primary_key=True)
+    from_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    to_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    
+    def get_url(self):
+        return url_for('api.get_friend', id=self.id, _external=True)
+    
+    def export_data(self):
+        return {
+            'self_url': self.get_url(),
+            'from_user_url': self.from_user.get_url(),
+            'to_user_url': self.to_user.get_url(),
+        }
+
+    def import_data(self, data):
+        try:
+            #TODO -- AirPair question -- how do from_user_id, to_user_id get set?
+            #self.quantity = int(data['quantity'])
+        except KeyError as e:
+            raise ValidationError('Invalid relationship: missing ' + e.args[0])
+        return self
+

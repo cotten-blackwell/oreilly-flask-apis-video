@@ -1,6 +1,7 @@
 import unittest
 from werkzeug.exceptions import NotFound
 from app import create_app, db
+#TODO -- import missing models
 from app.models import User, Customer
 from .test_client import TestClient
 
@@ -26,6 +27,38 @@ class TestAPI(unittest.TestCase):
         db.drop_all()
         self.ctx.pop()
 
+    def test_users(self):
+        # get list of users
+        rv, json = self.client.get('/api/v1/users/')
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['users'] == [])
+
+        # add a user
+        rv, json = self.client.post('/api/v1/users/', data={
+                                    'username': 'catInTheHat',
+                                    'email' : 'catInTheHat@gmail.com',
+                                    'password' : 'hereComesTrouble!'})
+        self.assertTrue(rv.status_code == 201)
+        location = rv.headers['Location']
+        rv, json = self.client.get(location)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['username'] == 'catInTheHat')
+        self.assertTrue(json['email'] == 'catInTheHat@gmail.com')
+#        rv, json = self.client.get('/api/v1/users/')
+#        self.assertTrue(rv.status_code == 200)
+#        self.assertTrue(json['users'] == [location])
+
+        # edit the user
+        rv, json = self.client.put(location, data={
+                                   'username': 'catInTheHat2',
+                                   'email' : 'catInTheHat2@gmail.com',
+                                   'password' : 'hereComesTrouble2!'})
+        self.assertTrue(rv.status_code == 200)
+        rv, json = self.client.get(location)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['username'] == 'catInTheHat2')
+        self.assertTrue(json['email'] == 'catInTheHat2@gmail.com')
+
     def test_customers(self):
         # get list of customers
         rv, json = self.client.get('/api/v1/customers/')
@@ -33,8 +66,7 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(json['customers'] == [])
 
         # add a customer
-        rv, json = self.client.post('/api/v1/customers/',
-                                    data={'name': 'john'})
+        rv, json = self.client.post('/api/v1/customers/', data={'name': 'john'})
         self.assertTrue(rv.status_code == 201)
         location = rv.headers['Location']
         rv, json = self.client.get(location)
@@ -57,7 +89,7 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(rv.status_code == 200)
         self.assertTrue(json['products'] == [])
 
-        # add a customer
+        # add a product
         rv, json = self.client.post('/api/v1/products/',
                                     data={'name': 'prod1'})
         self.assertTrue(rv.status_code == 201)
@@ -69,7 +101,7 @@ class TestAPI(unittest.TestCase):
         self.assertTrue(rv.status_code == 200)
         self.assertTrue(json['products'] == [location])
 
-        # edit the customer
+        # edit the product
         rv, json = self.client.put(location, data={'name': 'product1'})
         self.assertTrue(rv.status_code == 200)
         rv, json = self.client.get(location)
@@ -171,6 +203,188 @@ class TestAPI(unittest.TestCase):
         rv, json = self.client.get('/api/v1/orders/')
         self.assertTrue(rv.status_code == 200)
         self.assertTrue(len(json['orders']) == 0)
+
+    def test_messages_and_recipients(self):
+        # define first user for image sender
+        rv, json = self.client.post('/api/v1/users/', data={
+                                    'username': 'catInTheHat',
+                                    'email' : 'catInTheHat@gmail.com',
+                                    'password' : 'hereComesTrouble!'})
+        self.assertTrue(rv.status_code == 201)
+        sender = rv.headers['Location']
+        rv, json = self.client.get(sender)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['username'] == 'catInTheHat')
+        self.assertTrue(json['email'] == 'catInTheHat@gmail.com')
+            
+        # define two more users who will be recipients of the sent image
+        rv, json = self.client.post('/api/v1/users/', data={
+                                    'username': 'thing1',
+                                    'email' : 'thing1@gmail.com',
+                                    'password' : 'thing1rules!'})
+        self.assertTrue(rv.status_code == 201)
+        recipient_user1 = rv.headers['Location']
+        
+        rv, json = self.client.post('/api/v1/users/', data={
+                                    'username': 'thing2',
+                                    'email' : 'thing2@gmail.com',
+                                    'password' : 'thing2rules!'})
+        self.assertTrue(rv.status_code == 201)
+        recipient_user2 = rv.headers['Location']
+        
+        # create a message
+        rv, json = self.client.post(messages_url, data={
+                                    'file_path': '/api_v1/tfss-06978b00-0deb-4dbd-a50b-46d2ff705f32-image.png',
+                                    'file_type': 'image.png',
+                                    'date': '2014-01-01T00:00:00Z'})
+        self.assertTrue(rv.status_code == 201)
+        message = rv.headers['Location']
+        rv, json = self.client.get(message)
+        recipients_url = json['recipients_url']
+        rv, json = self.client.get(recipients_url)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['recipients'] == [])
+        rv, json = self.client.get('/api/v1/messages/')
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(len(json['messages']) == 1)
+        self.assertTrue(message in json['messages'])
+        
+        # edit the message
+        rv, json = self.client.put(message, data={
+                                   'file_path': '/api_v1/tfss-ad929dbd-5a2f-4673-9873-e6fe8334f0b4-video.mov',
+                                   'file_type': 'video.mov',
+                                   'date': '2014-02-02T00:00:00Z'})
+        self.assertTrue(rv.status_code == 200)
+        rv, json = self.client.get(message)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['date'] == '2014-02-02T00:00:00Z')
+        self.assertTrue(json['file_path'] == '/api_v1/tfss-ad929dbd-5a2f-4673-9873-e6fe8334f0b4-video.mov')
+        self.assertTrue(json['file_type'] == 'video.mov')
+        
+        # add the two recipients to the message
+        rv, json = self.client.post(recipients_url, data={
+                                    'friend_url': recipient_user1,
+                                    'message_url': message})
+        self.assertTrue(rv.status_code == 201)
+        recipient1 = rv.headers['Location']
+        
+        rv, json = self.client.post(recipients_url, data={
+                                    'friend_url': recipient_user2,
+                                    'message_url': message})
+        self.assertTrue(rv.status_code == 201)
+        recipient2 = rv.headers['Location']
+        
+        rv, json = self.client.get(recipients_url)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(len(json['recipients']) == 2)
+        self.assertTrue(recipient1 in json['recipients'])
+        self.assertTrue(recipient2 in json['recipients'])
+        
+        rv, json = self.client.get(recipient1)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['friend_url'] == recipient_user1)
+        self.assertTrue(json['message_url'] == message)
+        
+        rv, json = self.client.get(recipient2)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['friend_url'] == recipient_user2)
+        self.assertTrue(json['message_url'] == message)
+        
+        # delete first recipient
+        rv, json = self.client.delete(recipient1)
+        self.assertTrue(rv.status_code == 200)
+        rv, json = self.client.get(recipients_url)
+        self.assertFalse(recipient1 in json['recipients'])
+        self.assertTrue(recipient2 in json['recipients'])
+        
+        # delete message
+        rv, json = self.client.delete(message)
+        self.assertTrue(rv.status_code == 200)
+        with self.assertRaises(NotFound):
+            rv, json = self.client.get(recipient2)
+        rv, json = self.client.get('/api/v1/messages/')
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(len(json['messages']) == 0)
+
+    def test_friends(self):
+        # define first user for the from_user in the friend relationship
+        rv, json = self.client.post('/api/v1/users/', data={
+                                    'username': 'catInTheHat',
+                                    'email' : 'catInTheHat@gmail.com',
+                                    'password' : 'hereComesTrouble!'})
+        self.assertTrue(rv.status_code == 201)
+        from_user = rv.headers['Location']
+        rv, json = self.client.get(from_user)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['username'] == 'catInTheHat')
+        self.assertTrue(json['email'] == 'catInTheHat@gmail.com')
+        
+        # define second user for the to_user in the friend relationship
+        rv, json = self.client.post('/api/v1/users/', data={
+                                    'username': 'thing1',
+                                    'email' : 'thing1@gmail.com',
+                                    'password' : 'thing1rules!'})
+        self.assertTrue(rv.status_code == 201)
+        to_user1 = rv.headers['Location']
+        
+        # define third user for the to_user in the friend relationship
+        rv, json = self.client.post('/api/v1/users/', data={
+                                    'username': 'thing2',
+                                    'email' : 'thing2@gmail.com',
+                                    'password' : 'thing2rules!'})
+        self.assertTrue(rv.status_code == 201)
+        to_user2 = rv.headers['Location']
+        
+        # create first friend relationship -- first user friends himself
+        rv, json = self.client.post(friends_url, data={
+                                    'from_user_url': from_user,
+                                    'to_user_url': from_user})
+        self.assertTrue(rv.status_code == 201)
+        friend1 = rv.headers['Location']
+
+        # create second friend relationship -- between different users
+        rv, json = self.client.post(friends_url, data={
+                                    'from_user_url': from_user,
+                                    'to_user_url': to_user1})
+        self.assertTrue(rv.status_code == 201)
+        friend2 = rv.headers['Location']
+        
+        # create third friend relationship -- between different users
+        rv, json = self.client.post(friends_url, data={
+                                    'from_user_url': from_user,
+                                    'to_user_url': to_user2})
+        self.assertTrue(rv.status_code == 201)
+        friend3 = rv.headers['Location']
+            
+        rv, json = self.client.get(friends_url)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(len(json['friends']) == 3)
+        self.assertTrue(friend1 in json['friends'])
+        self.assertTrue(friend2 in json['friends'])
+        self.assertTrue(friend3 in json['friends'])
+
+        rv, json = self.client.get(friend1)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['from_user_url'] == from_user)
+        self.assertTrue(json['to_user_url'] == from_user)
+
+        rv, json = self.client.get(friend2)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['from_user_url'] == from_user)
+        self.assertTrue(json['to_user_url'] == to_user1)
+            
+        rv, json = self.client.get(friend3)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(json['from_user_url'] == from_user)
+        self.assertTrue(json['to_user_url'] == to_user2)
+            
+        # delete second friend
+        rv, json = self.client.delete(friend2)
+        self.assertTrue(rv.status_code == 200)
+        rv, json = self.client.get(friends_url)
+        self.assertTrue(friend1 in json['friends'])
+        self.assertFalse(friend2 in json['friends'])
+        self.assertTrue(friend3 in json['friends'])
 
     def test_pagination(self):
         # define 55 customers (3 pages at 25 per page)
