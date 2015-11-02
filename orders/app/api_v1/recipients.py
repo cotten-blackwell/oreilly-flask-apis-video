@@ -13,6 +13,13 @@ def get_message_recipients(id):
     message = Message.query.get_or_404(id)
     return message.recipients
 
+#TODO -- AirPair -- need a special route to get all Recipient records for a given friend User....
+@api.route('/recipients/<int:friend_id>', methods=['GET'])
+@json
+@paginate('recipients')
+def get_recipients_for_friend(friend_id):
+    return Recipient.query.get_or_404(friend_id)
+
 @api.route('/recipients/<int:id>', methods=['GET'])
 @json
 def get_recipient(id):
