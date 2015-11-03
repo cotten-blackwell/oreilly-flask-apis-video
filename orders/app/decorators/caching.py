@@ -33,7 +33,8 @@ def etag(f):
     def wrapped(*args, **kwargs):
         # etags only make sense for request that are cacheable, so only
         # GET and HEAD requests are allowed
-        assert request.method in ['GET', 'HEAD'],\
+        if request.method not in ['GET', 'HEAD']:
+            return make_response(f(*args, **kwargs))
             '@etag is only supported on GET and HEAD requests'
 
         # invoke the wrapped function and generate a response object from

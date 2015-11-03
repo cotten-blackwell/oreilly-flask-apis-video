@@ -20,4 +20,4 @@ def after_request(rv):
     return rv
 
 
-from . import customers, products, orders, items, errors
+from . import customers, products, orders, items, errors, users, messages, recipients

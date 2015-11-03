@@ -15,6 +15,7 @@ class User(db.Model):
     username = db.Column(db.String(64), index=True)
     email = db.Column(db.String(256))
     password_hash = db.Column(db.String(128))
+    sent = relationship("Message")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -137,7 +138,7 @@ class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     date = db.Column(db.DateTime, default=datetime.now)
-    recipients = db.relationship('Recipient', backref='order', lazy='dynamic', cascade='all, delete-orphan')
+    recipients = db.relationship('User', backref='inbox', lazy='dynamic', cascade='all, delete-orphan')
     file_path = db.Column(db.String(256))
     file_type = db.Column(db.String(64))
     
