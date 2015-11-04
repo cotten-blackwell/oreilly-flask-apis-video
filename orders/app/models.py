@@ -15,7 +15,10 @@ class User(db.Model):
     username = db.Column(db.String(64), index=True)
     email = db.Column(db.String(256))
     password_hash = db.Column(db.String(128))
-    sent = relationship("Message")
+    sent = db.relationship('Message')
+    inbox = db.relationship('Recipient')
+
+
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -43,7 +46,9 @@ class User(db.Model):
         return {
             'self_url': self.get_url(),
             'username': self.username,
-            'email' : self.email
+            'email' : self.email,
+            'sent' : [m.export_data() for m in self.sent],
+            'inbox': [m.export_data() for m in self.inbox]
         }
 
     def import_data(self, data):
@@ -138,7 +143,7 @@ class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     date = db.Column(db.DateTime, default=datetime.now)
-    recipients = db.relationship('User', backref='inbox', lazy='dynamic', cascade='all, delete-orphan')
+#    recipients = db.relationship('User', backref='inbox', lazy='subquery', cascade='all')
     file_path = db.Column(db.String(256))
     file_type = db.Column(db.String(64))
     
@@ -148,9 +153,9 @@ class Message(db.Model):
     def export_data(self):
         return {
             'self_url': self.get_url(),
-            'sender_url': self.sender.get_url(),
-            'date': self.date.isoformat() + 'Z',
-            'recipients_url': url_for('api.get_message_recipients', id=self.id,_external=True)
+            'sender_url': url_for('api.get_user', id=self.sender_id),
+            'date': self.date.isoformat() + 'Z'
+#            'recipients_url': url_for('api.get_message_recipients', id=self.id,_external=True)
         }
 
     def import_data(self, data):
@@ -211,9 +216,11 @@ class Recipient(db.Model):
         return url_for('api.get_recipient', id=self.id, _external=True)
 
     def export_data(self):
+        message = Recipient.query.get(self.message_id)
+        return message.export_data()
         return {
             'self_url': self.get_url(),
-            'friend_url': self.user.get_url(),
+            'friend_url': url_for('api.get_user', id=self.friend_id),
             'message_url': self.message.get_url()
         }
 
