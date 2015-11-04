@@ -37,7 +37,7 @@ if __name__ == '__main__':
             db.session.commit()
 
             recipient2 = Recipient(friend_id=cotten.id, message_id=message1.id)
-            db.session.add(recipient1)
+            db.session.add(recipient2)
             db.session.commit()
             
             recipient3 = Recipient(friend_id=victoria.id, message_id=message1.id)
@@ -48,11 +48,11 @@ if __name__ == '__main__':
             db.session.add(message2)
             db.session.commit()
             
-            recipient4 = Recipient(friend_id=alice.id, message_id=message1.id)
+            recipient4 = Recipient(friend_id=alice.id, message_id=message2.id)
             db.session.add(recipient4)
             db.session.commit()
             
-            recipient5 = Recipient(friend_id=victoria.id, message_id=message1.id)
+            recipient5 = Recipient(friend_id=victoria.id, message_id=message2.id)
             db.session.add(recipient5)
             db.session.commit()
 
