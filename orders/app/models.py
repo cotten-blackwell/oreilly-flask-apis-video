@@ -216,13 +216,12 @@ class Recipient(db.Model):
         return url_for('api.get_recipient', id=self.id, _external=True)
 
     def export_data(self):
-        message = Recipient.query.get(self.message_id)
-        return message.export_data()
+        message = Message.query.get(self.message_id)
         return {
             'self_url': self.get_url(),
             'friend_url': url_for('api.get_user', id=self.friend_id),
-            'message_url': self.message.get_url()
-        }
+            'message': message.export_data()
+    }
 
     def import_data(self, data):
         try:
