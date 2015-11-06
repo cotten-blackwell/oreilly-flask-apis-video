@@ -154,14 +154,18 @@ class Message(db.Model):
         return {
             'self_url': self.get_url(),
             'sender_url': url_for('api.get_user', id=self.sender_id),
-            'date': self.date.isoformat() + 'Z'
+            'date': self.date.isoformat() + 'Z',
+            'file_path': self.file_path,
+            'file_type': self.file_type
 #            'recipients_url': url_for('api.get_message_recipients', id=self.id,_external=True)
         }
 
     def import_data(self, data):
         try:
-            self.sender_id = int(data['sender_id'])
-            self.date = datetime_parser.parse(data['date']).astimezone(tzutc()).replace(tzinfo=None)
+            if data.get('sender_id', None) is not None:
+                self.sender_id = data.get('sender_id')
+            if data.get('date', None) is not None:
+                self.date = datetime_parser.parse(data['date']).astimezone(tzutc()).replace(tzinfo=None)
             #TODO -- how does self.recipients get set?
             #self.recipients = ??
             self.file_path = data['file_path']
@@ -169,6 +173,17 @@ class Message(db.Model):
         except KeyError as e:
             raise ValidationError('Invalid message: missing ' + e.args[0])
         return self
+#    def import_data(self, data):
+#        try:
+#            self.sender_id = int(data['sender_id'])
+#            self.date = datetime_parser.parse(data['date']).astimezone(tzutc()).replace(tzinfo=None)
+#            #TODO -- how does self.recipients get set?
+#            #self.recipients = ??
+#            self.file_path = data['file_path']
+#            self.file_type = data['file_type']
+#        except KeyError as e:
+#            raise ValidationError('Invalid message: missing ' + e.args[0])
+#        return self
 
 
 class Item(db.Model):
