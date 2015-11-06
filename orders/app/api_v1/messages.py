@@ -1,7 +1,6 @@
 from flask import request
 from . import api
 from .. import db
-#from ..models import Order, Customer
 from ..models import Message, User, Recipient
 from ..decorators import json, paginate
 

@@ -15,10 +15,9 @@ class User(db.Model):
     username = db.Column(db.String(64), index=True)
     email = db.Column(db.String(256))
     password_hash = db.Column(db.String(128))
+    friends = db.relationship('Friend')
     sent = db.relationship('Message')
     inbox = db.relationship('Recipient')
-
-
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -47,6 +46,7 @@ class User(db.Model):
             'self_url': self.get_url(),
             'username': self.username,
             'email' : self.email,
+            'friends' : [f.export_data() for f in self.friends],
             'sent' : [m.export_data() for m in self.sent],
             'inbox': [m.export_data() for m in self.inbox]
         }
@@ -251,23 +251,50 @@ class Recipient(db.Model):
 class Friend(db.Model):
     __tablename__ = 'friends'
     id = db.Column(db.Integer, primary_key=True)
+#    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     from_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     to_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
     
     def get_url(self):
         return url_for('api.get_friend', id=self.id, _external=True)
     
+#    def export_data(self):
+#        return {
+#            'self_url': self.get_url(),
+#            'sender_url': url_for('api.get_user', id=self.sender_id),
+#            'date': self.date.isoformat() + 'Z',
+#            'file_path': self.file_path,
+#            'file_type': self.file_type
+#        #            'recipients_url': url_for('api.get_message_recipients', id=self.id,_external=True)
+#    }
     def export_data(self):
         return {
             'self_url': self.get_url(),
-            'from_user_url': self.from_user.get_url(),
-            'to_user_url': self.to_user.get_url(),
+#            'from_user_url': self.from_user.get_url(),
+#            'to_user_url': self.to_user.get_url(),
+            'from_user_url': url_for('api.get_user', id=self.from_user_id),
+            'to_user_url': url_for('api.get_user', id=self.to_user_id)
         }
 
+#    def import_data(self, data):
+#        try:
+#            if data.get('sender_id', None) is not None:
+#                self.sender_id = data.get('sender_id')
+#                if data.get('date', None) is not None:
+#                    self.date = datetime_parser.parse(data['date']).astimezone(tzutc()).replace(tzinfo=None)
+#            #TODO -- how does self.recipients get set?
+#            #self.recipients = ??
+#            self.file_path = data['file_path']
+#                self.file_type = data['file_type']
+#            except KeyError as e:
+#                raise ValidationError('Invalid message: missing ' + e.args[0])
+#    return self
     def import_data(self, data):
         try:
-            #TODO -- AirPair question -- how do from_user_id, to_user_id get set?
-            #self.quantity = int(data['quantity'])
+#            if data.get('from_user_id', None) is not None:
+#                self.from_user_id = data.get('from_user_id')
+            if data.get('to_user_id', None) is not None:
+                self.to_user_id = data.get('to_user_id')
             print('for giggles')
         except KeyError as e:
             raise ValidationError('Invalid relationship: missing ' + e.args[0])
