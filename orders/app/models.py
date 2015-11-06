@@ -8,6 +8,12 @@ from . import db
 from .exceptions import ValidationError
 from .utils import split_url
 
+#users_friends = Table(
+#    'users_friends', Base.metadata,
+#    Column('from_user_id', ForeignKey('users.id'), primary_key=True),
+#    Column('to_user_id', ForeignKey('users.id'), primary_key=True),
+#)
+#
 
 class User(db.Model):
     __tablename__ = 'users'

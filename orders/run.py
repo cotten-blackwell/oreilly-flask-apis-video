@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import os
 from app import create_app, db
-from app.models import User, Message, Recipient
+from app.models import User, Message, Recipient, Friend
 
 if __name__ == '__main__':
     app = create_app(os.environ.get('FLASK_CONFIG', 'development'))
@@ -26,6 +26,19 @@ if __name__ == '__main__':
             victoria = User(username="victoria")
             victoria.set_password('victoria')
             db.session.add(victoria)
+            db.session.commit()
+            
+            #make friends with the other kids! ;)
+            friend1 = Friend(from_user_id=john.id, to_user_id=alice.id)
+            db.session.add(friend1)
+            db.session.commit()
+            
+            friend2 = Friend(from_user_id=john.id, to_user_id=cotten.id)
+            db.session.add(friend2)
+            db.session.commit()
+
+            friend3 = Friend(from_user_id=john.id, to_user_id=victoria.id)
+            db.session.add(friend3)
             db.session.commit()
             
             message1 = Message(sender_id=john.id)
