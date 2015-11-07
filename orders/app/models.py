@@ -21,7 +21,23 @@ class User(db.Model):
     username = db.Column(db.String(64), index=True)
     email = db.Column(db.String(256))
     password_hash = db.Column(db.String(128))
-    friends = db.relationship('Friend')
+#    followers = relationship(
+#                             'User',
+#                             secondary=users_followers,
+#                             primaryjoin=id == users_followers.c.leader_id,
+#                             secondaryjoin=id == users_followers.c.follower_id,
+#                             backref="leaders",
+#                             cascade='all',
+#                             )
+#    friends = db.relationship('Friend')
+    friends = db.relationship(
+        'User',
+        secondary=Friend,
+        primaryjoin=id == friends.c.from_user_id,
+        secondaryjoin=id == friends.c.to_user_id,
+        backref="from_friends",
+        cascade='all',
+        )
     sent = db.relationship('Message')
     inbox = db.relationship('Recipient')
 
