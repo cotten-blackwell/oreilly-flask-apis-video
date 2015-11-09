@@ -35,21 +35,11 @@ def get_friend(id):
 #    db.session.commit()
 #    return {}, 201, {'Location': message.get_url()}
 def new_user_friend(id):
-    from_user = User.query.get_or_404(id)
-    friend = Friend(from_user_id=id)
-    friend.import_data(request.json)
-    db.session.add(friend)
+    for friend_id in request.json['friend_ids']:
+        db.session.add(Friend(from_user_id=id, to_user_id=friend_id)
+    db.session.commit()
     db.session.commit()
     return {}, 201, {'Location': friend.get_url()}
-#def new_user_friend(id):
-#    from_user = User.query.get_or_404(from_user_id)
-#    to_user = User.query.get_or_404(to_user_id)
-#    friend = Friend(from_user=from_user, to_user)
-#    #TODO -- not sure if we can just delete the next line as not necessary?
-#    friend.import_data(request.json)
-#    db.session.add(friend)
-#    db.session.commit()
-#    return {}, 201, {'Location': friend.get_url()}
 
 #TODO -- delete?  not sure we need an update method here...
 @api.route('/friends/<int:id>', methods=['PUT'])
