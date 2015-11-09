@@ -8,7 +8,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         # create a development user and some sample data
-        if False and User.query.get(1) is None:
+        if User.query.get(1) is None:
             john = User(username='john')
             john.set_password('cat')
             db.session.add(john)

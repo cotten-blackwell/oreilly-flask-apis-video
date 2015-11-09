@@ -39,8 +39,8 @@ class TestAPI(unittest.TestCase):
                                     'email' : 'catInTheHat@gmail.com',
                                     'password' : 'hereComesTrouble!'})
         self.assertTrue(rv.status_code == 201)
-        location = rv.headers['Location']
-        rv, json = self.client.get(location)
+        user = rv.headers['Location']
+        rv, json = self.client.get(user)
         self.assertTrue(rv.status_code == 200)
         self.assertTrue(json['username'] == 'catInTheHat')
         self.assertTrue(json['email'] == 'catInTheHat@gmail.com')
@@ -49,16 +49,40 @@ class TestAPI(unittest.TestCase):
 #        self.assertTrue(json['users'] == [location])
 
         # edit the user
-        rv, json = self.client.put(location, data={
+        rv, json = self.client.put(user, data={
                                    'username': 'catInTheHat2',
                                    'email' : 'catInTheHat2@gmail.com',
                                    'password' : 'hereComesTrouble2!'})
-        self.assertTrue(rv.status_code == 200)
-        rv, json = self.client.get(location)
+        self.assertTrue(rv.status_code == 201)
+        rv, json = self.client.get(user)
         self.assertTrue(rv.status_code == 200)
         self.assertTrue(json['username'] == 'catInTheHat2')
         self.assertTrue(json['email'] == 'catInTheHat2@gmail.com')
 
+        # define two more users who will be friends of the current user
+        rv, json = self.client.post('/api/v1/users/', data={
+                                    'username': 'thing1',
+                                    'email' : 'thing1@gmail.com',
+                                    'password' : 'thing1rules!'})
+        self.assertTrue(rv.status_code == 201)
+        thing1 = rv.headers['Location']
+        
+        rv, json = self.client.post('/api/v1/users/', data={
+                                    'username': 'thing2',
+                                    'email' : 'thing2@gmail.com',
+                                    'password' : 'thing2rules!'})
+        self.assertTrue(rv.status_code == 201)
+        thing2 = rv.headers['Location']
+    
+        rv, json = self.client.post(user + '/friends/', data={
+                                    'friend_ids': [thing1.split('/')[-1],
+                                                      thing2.split('/')[-1]]})
+        self.assertTrue(rv.status_code == 201)
+        rv, json = self.client.get(user)
+        self.assertTrue(rv.status_code == 200)
+        self.assertTrue(len(json['friends']) == 2)
+    
+    
     def test_customers(self):
         # get list of customers
         rv, json = self.client.get('/api/v1/customers/')
@@ -307,86 +331,6 @@ class TestAPI(unittest.TestCase):
         rv, json = self.client.get('/api/v1/messages/')
         self.assertTrue(rv.status_code == 200)
         self.assertTrue(len(json['messages']) == 0)
-
-    def test_friends(self):
-        # define first user for the from_user in the friend relationship
-        rv, json = self.client.post('/api/v1/users/', data={
-                                    'username': 'catInTheHat',
-                                    'email' : 'catInTheHat@gmail.com',
-                                    'password' : 'hereComesTrouble!'})
-        self.assertTrue(rv.status_code == 201)
-        from_user = rv.headers['Location']
-        rv, json = self.client.get(from_user)
-        self.assertTrue(rv.status_code == 200)
-        self.assertTrue(json['username'] == 'catInTheHat')
-        self.assertTrue(json['email'] == 'catInTheHat@gmail.com')
-        
-        # define second user for the to_user in the friend relationship
-        rv, json = self.client.post('/api/v1/users/', data={
-                                    'username': 'thing1',
-                                    'email' : 'thing1@gmail.com',
-                                    'password' : 'thing1rules!'})
-        self.assertTrue(rv.status_code == 201)
-        to_user1 = rv.headers['Location']
-        
-        # define third user for the to_user in the friend relationship
-        rv, json = self.client.post('/api/v1/users/', data={
-                                    'username': 'thing2',
-                                    'email' : 'thing2@gmail.com',
-                                    'password' : 'thing2rules!'})
-        self.assertTrue(rv.status_code == 201)
-        to_user2 = rv.headers['Location']
-        
-        # create first friend relationship -- first user friends himself
-        rv, json = self.client.post(friends_url, data={
-                                    'from_user_url': from_user,
-                                    'to_user_url': from_user})
-        self.assertTrue(rv.status_code == 201)
-        friend1 = rv.headers['Location']
-
-        # create second friend relationship -- between different users
-        rv, json = self.client.post(friends_url, data={
-                                    'from_user_url': from_user,
-                                    'to_user_url': to_user1})
-        self.assertTrue(rv.status_code == 201)
-        friend2 = rv.headers['Location']
-        
-        # create third friend relationship -- between different users
-        rv, json = self.client.post(friends_url, data={
-                                    'from_user_url': from_user,
-                                    'to_user_url': to_user2})
-        self.assertTrue(rv.status_code == 201)
-        friend3 = rv.headers['Location']
-            
-        rv, json = self.client.get(friends_url)
-        self.assertTrue(rv.status_code == 200)
-        self.assertTrue(len(json['friends']) == 3)
-        self.assertTrue(friend1 in json['friends'])
-        self.assertTrue(friend2 in json['friends'])
-        self.assertTrue(friend3 in json['friends'])
-
-        rv, json = self.client.get(friend1)
-        self.assertTrue(rv.status_code == 200)
-        self.assertTrue(json['from_user_url'] == from_user)
-        self.assertTrue(json['to_user_url'] == from_user)
-
-        rv, json = self.client.get(friend2)
-        self.assertTrue(rv.status_code == 200)
-        self.assertTrue(json['from_user_url'] == from_user)
-        self.assertTrue(json['to_user_url'] == to_user1)
-            
-        rv, json = self.client.get(friend3)
-        self.assertTrue(rv.status_code == 200)
-        self.assertTrue(json['from_user_url'] == from_user)
-        self.assertTrue(json['to_user_url'] == to_user2)
-            
-        # delete second friend
-        rv, json = self.client.delete(friend2)
-        self.assertTrue(rv.status_code == 200)
-        rv, json = self.client.get(friends_url)
-        self.assertTrue(friend1 in json['friends'])
-        self.assertFalse(friend2 in json['friends'])
-        self.assertTrue(friend3 in json['friends'])
 
     def test_pagination(self):
         # define 55 customers (3 pages at 25 per page)

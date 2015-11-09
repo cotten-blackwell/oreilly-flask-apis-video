@@ -24,19 +24,6 @@ def get_recipients_for_friend(friend_id):
 @json
 def get_recipient(id):
     return Recipient.query.get_or_404(id).export_data()
-#
-#TODO - route needs to take both a message_id and a user_id!
-#@api.route('/messages/<int:id>/recipients/', methods=['POST'])
-@api.route('/messages/<int:message_id>/users/<int:user_id>/recipients/', methods=['POST'])
-@json
-def new_message_recipient(id):
-    message = Message.query.get_or_404(message_id)
-    user = User.query.get_or_404(user_id)
-    recipient = Recipient(message=message, user=user)
-    recipient.import_data(request.json)
-    db.session.add(recipient)
-    db.session.commit()
-    return {}, 201, {'Location': recipient.get_url()}
 
 #TODO -- delete?  not sure we need an update method here...
 @api.route('/recipients/<int:id>', methods=['PUT'])
@@ -48,6 +35,8 @@ def edit_recipient(id):
     db.session.commit()
     return {}
 
+'''
+don't think this is needed -- can do it through updating the recipients list of a message...
 @api.route('/recipients/<int:id>', methods=['DELETE'])
 @json
 def delete_recipient(id):
@@ -55,3 +44,4 @@ def delete_recipient(id):
     db.session.delete(recipient)
     db.session.commit()
     return {}
+'''

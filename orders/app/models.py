@@ -8,12 +8,6 @@ from . import db
 from .exceptions import ValidationError
 from .utils import split_url
 
-#users_friends = Table(
-#    'users_friends', Base.metadata,
-#    Column('from_user_id', ForeignKey('users.id'), primary_key=True),
-#    Column('to_user_id', ForeignKey('users.id'), primary_key=True),
-#)
-#
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -21,23 +15,8 @@ class User(db.Model):
     username = db.Column(db.String(64), index=True)
     email = db.Column(db.String(256))
     password_hash = db.Column(db.String(128))
-#    followers = relationship(
-#                             'User',
-#                             secondary=users_followers,
-#                             primaryjoin=id == users_followers.c.leader_id,
-#                             secondaryjoin=id == users_followers.c.follower_id,
-#                             backref="leaders",
-#                             cascade='all',
-#                             )
-#    friends = db.relationship('Friend')
-    friends = db.relationship(
-        'User',
-        secondary=Friend,
-        primaryjoin=id == friends.c.from_user_id,
-        secondaryjoin=id == friends.c.to_user_id,
-        backref="from_friends",
-        cascade='all',
-        )
+    friends = db.relationship('Friend', foreign_keys='Friend.from_user_id')
+#    stalkers = db.relationship('Friend', foreign_keys='Friend.to_user_id')
     sent = db.relationship('Message')
     inbox = db.relationship('Recipient')
 
@@ -179,7 +158,6 @@ class Message(db.Model):
             'date': self.date.isoformat() + 'Z',
             'file_path': self.file_path,
             'file_type': self.file_type
-#            'recipients_url': url_for('api.get_message_recipients', id=self.id,_external=True)
         }
 
     def import_data(self, data):
@@ -188,25 +166,11 @@ class Message(db.Model):
                 self.sender_id = data.get('sender_id')
             if data.get('date', None) is not None:
                 self.date = datetime_parser.parse(data['date']).astimezone(tzutc()).replace(tzinfo=None)
-            #TODO -- how does self.recipients get set?
-            #self.recipients = ??
             self.file_path = data['file_path']
             self.file_type = data['file_type']
         except KeyError as e:
             raise ValidationError('Invalid message: missing ' + e.args[0])
         return self
-#    def import_data(self, data):
-#        try:
-#            self.sender_id = int(data['sender_id'])
-#            self.date = datetime_parser.parse(data['date']).astimezone(tzutc()).replace(tzinfo=None)
-#            #TODO -- how does self.recipients get set?
-#            #self.recipients = ??
-#            self.file_path = data['file_path']
-#            self.file_type = data['file_type']
-#        except KeyError as e:
-#            raise ValidationError('Invalid message: missing ' + e.args[0])
-#        return self
-
 
 class Item(db.Model):
     __tablename__ = 'items'
@@ -260,65 +224,21 @@ class Recipient(db.Model):
             'message': message.export_data()
     }
 
-    def import_data(self, data):
-        try:
-            #TODO -- AirPair question -- how do friend_id, message_id get set?
-            #self.quantity = int(data['quantity'])
-            print('for giggles')
-        except KeyError as e:
-            raise ValidationError('Invalid message: missing ' + e.args[0])
-        return self
 
-#TODO -- AirPair question -- Friend is really more like XrefUserUser?...
 class Friend(db.Model):
     __tablename__ = 'friends'
     id = db.Column(db.Integer, primary_key=True)
-#    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
-    from_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
-    to_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), index=True)
+    from_user_id = db.Column(db.ForeignKey('users.id'), index=True)
+    to_user_id = db.Column(db.ForeignKey('users.id'), index=True)
     
     def get_url(self):
         return url_for('api.get_friend', id=self.id, _external=True)
     
-#    def export_data(self):
-#        return {
-#            'self_url': self.get_url(),
-#            'sender_url': url_for('api.get_user', id=self.sender_id),
-#            'date': self.date.isoformat() + 'Z',
-#            'file_path': self.file_path,
-#            'file_type': self.file_type
-#        #            'recipients_url': url_for('api.get_message_recipients', id=self.id,_external=True)
-#    }
     def export_data(self):
         return {
             'self_url': self.get_url(),
-#            'from_user_url': self.from_user.get_url(),
-#            'to_user_url': self.to_user.get_url(),
             'from_user_url': url_for('api.get_user', id=self.from_user_id),
             'to_user_url': url_for('api.get_user', id=self.to_user_id)
         }
 
-#    def import_data(self, data):
-#        try:
-#            if data.get('sender_id', None) is not None:
-#                self.sender_id = data.get('sender_id')
-#                if data.get('date', None) is not None:
-#                    self.date = datetime_parser.parse(data['date']).astimezone(tzutc()).replace(tzinfo=None)
-#            #TODO -- how does self.recipients get set?
-#            #self.recipients = ??
-#            self.file_path = data['file_path']
-#                self.file_type = data['file_type']
-#            except KeyError as e:
-#                raise ValidationError('Invalid message: missing ' + e.args[0])
-#    return self
-    def import_data(self, data):
-        try:
-#            if data.get('from_user_id', None) is not None:
-#                self.from_user_id = data.get('from_user_id')
-            if data.get('to_user_id', None) is not None:
-                self.to_user_id = data.get('to_user_id')
-            print('for giggles')
-        except KeyError as e:
-            raise ValidationError('Invalid relationship: missing ' + e.args[0])
-        return self
 
